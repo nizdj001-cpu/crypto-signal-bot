@@ -1,0 +1,40 @@
+name: Crypto Signal Bot
+
+on:
+  schedule:
+    # هر ۱۵ دقیقه یک‌بار اجرا می‌شه (فرمت cron: دقیقه ساعت روز ماه روزهفته)
+    - cron: "*/15 * * * *"
+  workflow_dispatch: {}   # امکان اجرای دستی از تب Actions در گیت‌هاب
+
+permissions:
+  contents: write   # اجازه commit کردن تاریخچه سیگنال‌ها به ریپو
+
+jobs:
+  run-signal-bot:
+    runs-on: ubuntu-latest
+    steps:
+      - name: چک‌اوت کد ریپو
+        uses: actions/checkout@v4
+
+      - name: نصب پایتون
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: نصب پکیج‌ها
+        run: pip install -r requirements.txt
+
+      - name: اجرای اسکریپت اصلی
+        env:
+          GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+        run: python main.py
+
+      - name: ذخیره تاریخچه سیگنال‌ها در ریپو
+        run: |
+          git config --global user.name "signal-bot"
+          git config --global user.email "signal-bot@users.noreply.github.com"
+          git add history/signals_history.json
+          git diff --staged --quiet || git commit -m "بروزرسانی تاریخچه سیگنال‌ها [skip ci]"
+          git push
